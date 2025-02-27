@@ -24,9 +24,9 @@ public class JsfXSS extends Renderer
         ResponseWriter writer = facesContext.getResponseWriter();
         writer.write("<script type=\"text/javascript\">");
         writer.write("(function(){");
-        writer.write("dswh.init('" + windowId + "','" // $xss
+        writer.write("dswh.init('" + windowId + "','"
                 + "......" + "',"
-                + -1 + ",{");
+                + -1 + ",{"); // $ xss
         writer.write("});");
         writer.write("})();");
         writer.write("</script>");
@@ -57,13 +57,13 @@ public class JsfXSS extends Renderer
     {
         ExternalContext ec = facesContext.getExternalContext();
         ResponseWriter writer = facesContext.getResponseWriter();
-        writer.write(ec.getRequestParameterMap().keySet().iterator().next()); // $xss
-        writer.write(ec.getRequestParameterNames().next()); // $xss
-        writer.write(ec.getRequestParameterValuesMap().get("someKey")[0]); // $xss
-        writer.write(ec.getRequestParameterValuesMap().keySet().iterator().next()); // $xss
-        writer.write(ec.getRequestPathInfo()); // $xss
-        writer.write(((Cookie)ec.getRequestCookieMap().get("someKey")).getName()); // $xss
-        writer.write(ec.getRequestHeaderMap().get("someKey")); // $xss
-        writer.write(ec.getRequestHeaderValuesMap().get("someKey")[0]); // $xss
+        writer.write(ec.getRequestParameterMap().keySet().iterator().next()); // $ xss
+        writer.write(ec.getRequestParameterNames().next()); // $ xss
+        writer.write(ec.getRequestParameterValuesMap().get("someKey")[0]); // $ xss
+        writer.write(ec.getRequestParameterValuesMap().keySet().iterator().next()); // $ xss
+        writer.write(ec.getRequestPathInfo()); // $ xss
+        writer.write(((Cookie)ec.getRequestCookieMap().get("someKey")).getName()); // $ xss
+        writer.write(ec.getRequestHeaderMap().get("someKey")); // $ xss
+        writer.write(ec.getRequestHeaderValuesMap().get("someKey")[0]); // $ xss
     }
 }
