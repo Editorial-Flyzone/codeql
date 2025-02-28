@@ -1,4 +1,3 @@
-private import codeql.Locations
 private import codeql.ruby.AST
 private import internal.Erb
 private import internal.TreeSitter
@@ -38,6 +37,7 @@ class ErbTemplate extends TTemplate, ErbAstNode {
 
   final override string getAPrimaryQlClass() { result = "ErbTemplate" }
 
+  /** Gets a child node, if any. */
   ErbAstNode getAChildNode() { toGenerated(result) = g.getChild(_) }
 }
 
@@ -118,7 +118,7 @@ private class ErbDirectiveFile extends File {
 
   /** Gets a statement in this file. */
   pragma[nomagic]
-  Stmt getAStmt(int startLine, int startColumn) {
+  AstNode getAnAstNode(int startLine, int startColumn) {
     exists(Location loc |
       result.getLocation() = loc and
       loc.getFile() = this and
@@ -142,13 +142,13 @@ class ErbDirective extends TDirectiveNode, ErbAstNode {
     )
   }
 
-  private predicate containsStmtStart(Stmt s) {
+  private predicate containsAstNodeStart(AstNode s) {
     // `Toplevel` statements are not contained within individual directives,
     // though their start location may appear within a directive location
     not s instanceof Toplevel and
     exists(ErbDirectiveFile file, int startLine, int startColumn |
       this.spans(file, startLine) and
-      s = file.getAStmt(startLine, startColumn) and
+      s = file.getAnAstNode(startLine, startColumn) and
       locationIncludesPosition(this.getLocation(), startLine, startColumn)
     )
   }
@@ -157,9 +157,10 @@ class ErbDirective extends TDirectiveNode, ErbAstNode {
    * Gets a statement that starts in directive that is not a child of any other
    * statement starting in this directive.
    */
+  cached
   Stmt getAChildStmt() {
-    this.containsStmtStart(result) and
-    not this.containsStmtStart(result.getParent())
+    this.containsAstNodeStart(result) and
+    not this.containsAstNodeStart(result.getParent())
   }
 
   /**
@@ -197,7 +198,11 @@ class ErbCommentDirective extends ErbDirective {
 
   override ErbComment getToken() { toGenerated(result) = g.getChild() }
 
-  final override string toString() { result = "<%#" + this.getToken().toString() + "%>" }
+  final override string toString() {
+    result = "<%#" + this.getToken().toString() + "%>"
+    or
+    not exists(this.getToken()) and result = "<%#%>"
+  }
 
   final override string getAPrimaryQlClass() { result = "ErbCommentDirective" }
 }
@@ -222,7 +227,11 @@ class ErbGraphqlDirective extends ErbDirective {
 
   override ErbCode getToken() { toGenerated(result) = g.getChild() }
 
-  final override string toString() { result = "<%graphql" + this.getToken().toString() + "%>" }
+  final override string toString() {
+    result = "<%graphql" + this.getToken().toString() + "%>"
+    or
+    not exists(this.getToken()) and result = "<%graphql%>"
+  }
 
   final override string getAPrimaryQlClass() { result = "ErbGraphqlDirective" }
 }
@@ -247,7 +256,31 @@ class ErbOutputDirective extends ErbDirective {
 
   override ErbCode getToken() { toGenerated(result) = g.getChild() }
 
-  final override string toString() { result = "<%=" + this.getToken().toString() + "%>" }
+  /**
+   * Holds if this is a raw Erb output directive.
+   * ```erb
+   * <%== foo %>
+   * ```
+   */
+  predicate isRaw() {
+    exists(Erb::Token t | t.getParentIndex() = 0 and t.getParent() = g and t.getValue() = "<%==")
+  }
+
+  final override string toString() {
+    this.isRaw() and
+    (
+      result = "<%==" + this.getToken().toString() + "%>"
+      or
+      not exists(this.getToken()) and result = "<%==%>"
+    )
+    or
+    not this.isRaw() and
+    (
+      result = "<%=" + this.getToken().toString() + "%>"
+      or
+      not exists(this.getToken()) and result = "<%=%>"
+    )
+  }
 
   final override string getAPrimaryQlClass() { result = "ErbOutputDirective" }
 }
@@ -265,7 +298,11 @@ class ErbExecutionDirective extends ErbDirective {
 
   ErbExecutionDirective() { this = TDirective(g) }
 
-  final override string toString() { result = "<%" + this.getToken().toString() + "%>" }
+  final override string toString() {
+    result = "<%" + this.getToken().toString() + "%>"
+    or
+    not exists(this.getToken()) and result = "<%-%>"
+  }
 
   final override string getAPrimaryQlClass() { result = "ErbExecutionDirective" }
 }
